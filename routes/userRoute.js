@@ -4,7 +4,7 @@ const User = require("../models/userModel")
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
 const jwtSecret = "food_application_esshwar";
-
+const log = require('log-beautify');
 router.post("/register", async (req, res) => {
     const { name, email, password } = req.body
     if (!name || !email || !password) {
@@ -47,27 +47,47 @@ router.post("/register", async (req, res) => {
 
 });
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body
-    try {
-        const user = await User.find({ email, password })
-        if (user.length > 0) {
-            // res.send('User Logged in successfully')
-            const token = jwt.sign({ id: user._id }, jwtSecret, { expiresIn: 3600 });
-            if (!token) throw Error('Couldnt sign the token');
-            const currentuser = {
-                name: user[0].name,
-                email: user[0].email,
-                _id: user[0]._id
+    const { email, password } = req.body;
+    if (email && password) {
+        User.findOne({ email }, (error, resultUser) => {
+            console.log("🚀 ~ file: userRoute.js ~ line 53 ~ User.findOne ~ resultUser", resultUser)
+            if (error) {
+                res.status(500).json({ message: 'Internal Server Error' });
+            } else if (resultUser) {
+
+                bcrypt.compare(password, resultUser.password, (error, success) => {
+                    if (error) {
+                        res.status(500).json({ message: 'Internal Server Error' });
+                    } else if (success) {
+                        let token = jwt.sign(
+                            { id: resultUser._id },
+                            jwtSecret,
+                            {
+                                expiresIn: '1h'
+                            }
+                        );
+                        log.success('sucesfullt verified the pwd');
+                        res.status(200).json({
+                            message: 'Success',
+                            token: token,
+                            email: resultUser.email,
+                            name: resultUser.name
+                        });
+                    } else {
+                        log.warn('invalid creds')
+                        res.status(409).json({ message: 'Invalid Credentials' });
+                    }
+                });
+
+            } else {
+                res.status(409).json({ message: 'Invalid Credentials' });
             }
-            res.send({ user, token });
-        }
-        else {
-            return res.status(400).json({ message: 'User Login Failed' })
-        }
+        });
+    } else {
+        res.status(401).json({ message: 'Please enter valid Credentials' });
     }
-    catch (error) {
-        return res.status(400).json({ message: 'Something went wrong' })
-    }
+
+
 });
 
 module.exports = router

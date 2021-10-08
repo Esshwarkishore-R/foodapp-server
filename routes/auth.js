@@ -3,7 +3,7 @@ const JWT_SECRET = 'food_application_esshwar';
 
 function auth(req, res, next) {
     const token = req.header('x-auth-token');
-    console.log(req.headers.isLogin)
+    console.log(req.headers.islogin, 'check token')
     if (req.headers.islogin == 'false') {
         next();
     }
